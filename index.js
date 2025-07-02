@@ -9,6 +9,7 @@ require("dotenv").config();
 
 const authRouter = require('./routes/authRoute');
 const userRouter = require("./routes/userRoute");
+const productRouter = require("./routes/productRoute");
 
 // Set Middlewares
 app.use(cookieParser())
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // Api Router
 app.use("/api/auth" , authRouter)
 app.use("/api/user" , userRouter)
+app.use("/api/product" , productRouter)
 
 
 // Error Handler

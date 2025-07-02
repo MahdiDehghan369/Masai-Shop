@@ -228,3 +228,15 @@ exports.unBlockUser = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.getAllBlockUsers = async (req , res, next) => {
+  try {
+    const blockUsers = await UserModel.find({isBlock: true} , "-__v -password").lean()
+    return res.status(200).json({
+      success: true,
+      users: blockUsers
+    })
+  } catch (error) {
+    next(error)
+  }
+}

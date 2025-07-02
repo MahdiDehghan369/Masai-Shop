@@ -46,6 +46,13 @@ exports.login = async (req, res, next) => {
     const isUserExists = await UserModel.findOne({ email }, "-__v");
 
     if (isUserExists && (await isUserExists.comparePassword(password))) {
+
+      if(isUserExists.isBlock === true){
+        return res.status(403).json({
+          success: false,
+          message: "You can not login because you exist in block list 🤦‍♂️🤦‍♀️"
+        })
+      }
       const refreshToken = await generateRefreshToken(isUserExists?._id);
 
       await UserModel.updateOne(

@@ -12,6 +12,7 @@ router
 
 router.route("/edit").put(authMiddleware, userCtrl.updateOneUser);
 
+router.route("/all-block-users").get(authMiddleware , isAdminMiddleware , userCtrl.getAllBlockUsers)
 router.route("/block/:id").patch(authMiddleware , isAdminMiddleware , userCtrl.blockUser)
 router.route("/unblock/:id").patch(authMiddleware , isAdminMiddleware , userCtrl.unBlockUser)
 
