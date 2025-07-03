@@ -13,4 +13,8 @@ router.route("/login").post(authCtrl.login);
 router.route("/refresh-token").post(authCtrl.refreshToken)
 router.route("/logout").post(authCtrl.logout)
 
+router.route("/request-reset-password").post(authCtrl.requestResetPassword)
+router.route("/verify-otp").post(authCtrl.verifyOtpCode);
+router.route("/reset-password").post(authCtrl.resetPassword)
+
 module.exports = router
