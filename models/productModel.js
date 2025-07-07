@@ -20,7 +20,7 @@ const productSchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true,
     },
     price: {
       type: Number,
@@ -55,9 +55,20 @@ const productSchema = new mongoose.Schema(
     ratings: [
       {
         star: { type: Number, min: 1, max: 5 },
-        postedBy: { type: mongoose.Types.ObjectId, ref: "User" },
+        comment: {type: String},
+        postedBy: { type: mongoose.Types.ObjectId, ref: "User" }
       },
     ],
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

@@ -1,5 +1,7 @@
 const { isValidObjectId } = require("mongoose");
 const UserModel = require("./../models/userModel");
+const coupenModel = require("./../models/coupenModel");
+const bcrypt = require('bcrypt');
 
 exports.getAllUsers = async (req, res, next) => {
   try {
@@ -24,7 +26,10 @@ exports.getOneUser = async (req, res, next) => {
       });
     }
 
-    const user = await UserModel.findOne({ _id: id }, "-password -__v").lean();
+    const user = await UserModel.findOne(
+      { _id: id },
+      "-password -__v -refreshToken"
+    ).populate("wishlist");
 
     if(!user){
       return res.status(404).json({
@@ -240,3 +245,32 @@ exports.getAllBlockUsers = async (req , res, next) => {
     next(error)
   }
 }
+
+
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+
+    const user = await UserModel.findOneAndUpdate({ _id: userId } , {password: hashedPassword});
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found ❌",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully ✅",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+

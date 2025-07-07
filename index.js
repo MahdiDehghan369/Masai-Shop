@@ -10,6 +10,10 @@ require("dotenv").config();
 const authRouter = require('./routes/authRoute');
 const userRouter = require("./routes/userRoute");
 const productRouter = require("./routes/productRoute");
+const blogRouter = require("./routes/blogRoute");
+const categoryRouter = require("./routes/categoryRoute");
+const coupenRouter = require("./routes/coupenRoute");
+const brandRouter = require("./routes/brandRoute");
 
 // Set Middlewares
 app.use(cookieParser())
@@ -21,6 +25,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth" , authRouter)
 app.use("/api/user" , userRouter)
 app.use("/api/product" , productRouter)
+app.use("/api/blog" , blogRouter)
+app.use("/api/category" , categoryRouter)
+app.use("/api/brand" , brandRouter)
+app.use("/api/coupen" , coupenRouter)
 
 
 // Error Handler

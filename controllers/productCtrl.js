@@ -1,9 +1,13 @@
 const { isValidObjectId } = require("mongoose");
 const ProductModel = require("./../models/productModel");
-const { $where, findOneAndDelete } = require("../models/userModel");
+const UserModel = require("../models/userModel");
+const fs = require('fs');
+const path = require('path');
 
 exports.createProduct = async (req, res, next) => {
   try {
+
+    console.log(req.files);
     let {
       title,
       slug,
@@ -15,9 +19,18 @@ exports.createProduct = async (req, res, next) => {
       color,
     } = req.body;
 
-    slug = slug.trim().replace(" " , "-")
+    slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
 
     const isProductExistsWithSlug = await ProductModel.findOne({ slug }).lean();
+
+    if (isProductExistsWithSlug) {
+      if (req.files) {
+        req.files.forEach((file) => {
+          const filePath = path.join(__dirname, `../public/images/products/${file.filename}`);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        })
+      }
+    }
 
     if (isProductExistsWithSlug) {
       return res.status(422).json({
@@ -25,6 +38,9 @@ exports.createProduct = async (req, res, next) => {
         message: "A product with this slug already exists ❌",
       });
     }
+
+    const imageUrls =
+      req.files?.map((file) => `/images/products/${file.filename}`) || [];
 
     const newProduct = await ProductModel.create({
       title,
@@ -36,6 +52,7 @@ exports.createProduct = async (req, res, next) => {
       quantity,
       brand,
       color,
+      images: imageUrls,
     });
 
     return res.status(200).json({
@@ -44,6 +61,16 @@ exports.createProduct = async (req, res, next) => {
       product: newProduct,
     });
   } catch (error) {
+    if (req.files) {
+      req.files.forEach((file) => {
+        const filePath = path.join(
+          __dirname,
+          `../public/images/products/${file.filename}`
+        );
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      });
+    }
+
     next(error);
   }
 };
@@ -72,7 +99,7 @@ try {
   let { title, slug, description, price, category, quantity, brand, color } =
     req.body;
 
-  slug = slug.trim().replace(" ", "-");
+    slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
 
   const isProductExistsWithSlug = await ProductModel.findOne({$and: [{slug} , {_id : {$ne : id}}]}).lean();
 
@@ -123,6 +150,18 @@ exports.removeOneProduct = async(req, res , next) => {
       });
     }
 
+    const imageUrls = product.images
+
+    if(imageUrls){
+      imageUrls.forEach((file) => {
+        const filePath = path.join(
+          __dirname,
+          `../public${file}`
+        );
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      });
+    }
+
     return res.status(200).json({
       success: true,
       message: "Product removed successfully ❌",
@@ -138,7 +177,7 @@ exports.getOneProductInfo = async (req, res, next) => {
 
     slug = slug.trim().replace(" " , "-");
 
-    const product = await ProductModel.findOne({ slug }, "-__v").populate("createdBy" , "firstname , lastname , email").lean();
+    const product = await ProductModel.findOne({ slug }, "-__v").populate("createdBy" , "firstname , lastname , email").populate("ratings.postedBy" , "firstname , lastname , _id").lean();
 
     if (!product) {
       return res.status(404).json({
@@ -231,3 +270,116 @@ exports.getAllProducts = async (req, res, next) => {
     next(err);
   }
 };
+
+
+exports.addToWishlist = async(req, res, next) => {
+  try {
+    const userId = req.user.id 
+    const {productId} = req.body
+
+    if(!isValidObjectId(productId)){
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid ❌"
+      })  
+    }
+
+    const product = await ProductModel.findOne({_id: productId})
+
+    if(!product){
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌"
+      })
+    }
+
+    const user = await UserModel.findOne({_id: userId})
+
+    const alredyExists = user.wishlist.includes(productId)
+
+    let message = ""
+
+    if(alredyExists){
+      await UserModel.updateOne({_id: userId} , {
+        $pull: {wishlist: productId}
+      })
+
+      message = "Product removed from whishlist 👍"
+    }else{
+      await UserModel.updateOne(
+        { _id: userId },
+        {
+          $push: { wishlist: productId },
+        }
+      );
+       message = "Product added to whishlist 👍";
+    }
+
+    return res.status(200).json({
+      success: true,
+      message
+    })
+
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.rating = async(req , res , next) => {
+  try {
+    const userId = req.user.id;
+    const { productId , star, comment } = req.body;
+
+    if (!isValidObjectId(productId)) {
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid ❌",
+      });
+    }
+
+    const product = await ProductModel.findOne({ _id: productId });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌",
+      });
+    }
+
+    const existingRatingIndex = product.ratings.findIndex(
+      (r) => r.postedBy.toString() === userId.toString()
+    );
+
+    if (existingRatingIndex !== -1) {
+      product.ratings[existingRatingIndex].star = star;
+      product.ratings[existingRatingIndex].comment = comment;
+      product.ratings[existingRatingIndex].createdAt = new Date();
+    } else {
+      product.ratings.push({
+        postedBy: userId,
+        star,
+        comment
+      });
+      product.totalRating += 1;
+    }
+
+    let totalStars = 0;
+    for (const rating of product.ratings) {
+      totalStars += rating.star;
+    }
+    product.averageRating = totalStars / product.ratings.length;
+
+
+    await product.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Rating submitted successfully ✅",
+      product
+    });
+
+
+  } catch (error) {
+    next(error)
+  }
+}
