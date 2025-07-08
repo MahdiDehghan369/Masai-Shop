@@ -11,12 +11,31 @@ const {
 
 router
   .route("/")
-  .post(authMiddleware, isAdminMiddleware,  uploadPhoto.array("images" , 10) , productImgResize ,productCtrl.createProduct)
+  .post(authMiddleware, isAdminMiddleware, productCtrl.createProduct)
   .get(productCtrl.getAllProducts);
 
 
   router.route("/whishlist").put(authMiddleware, productCtrl.addToWishlist);
   router.route("/rating").post(authMiddleware, productCtrl.rating);
+
+router
+  .route("/:id/cover")
+  .delete(authMiddleware, isAdminMiddleware, productCtrl.removeCover)
+  .put(
+    authMiddleware,
+    isAdminMiddleware,
+    uploadPhoto.single("cover"),
+    productCtrl.addProductCover
+  );
+
+  
+router
+  .route("/:id/gallery")
+  .delete(
+    authMiddleware,
+    isAdminMiddleware,
+    productCtrl.removeAImageFromGallery
+  ).put(authMiddleware , isAdminMiddleware , uploadPhoto.array("images" , 10) , productImgResize , productCtrl.addProductGallery)
 
 
 router

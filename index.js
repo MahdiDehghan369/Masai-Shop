@@ -4,6 +4,7 @@ const cookieParser = require('cookie-parser');
 const PORT = process.env.PORT || 369
 const dbConnect = require('./configs/dbConnect');
 const errorHandler = require('./middlewares/errorHandler');
+const path = require('path');
 dbConnect()
 require("dotenv").config();
 
@@ -14,6 +15,8 @@ const blogRouter = require("./routes/blogRoute");
 const categoryRouter = require("./routes/categoryRoute");
 const coupenRouter = require("./routes/coupenRoute");
 const brandRouter = require("./routes/brandRoute");
+
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 // Set Middlewares
 app.use(cookieParser())
