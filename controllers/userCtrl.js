@@ -274,3 +274,33 @@ exports.changePassword = async (req, res, next) => {
 };
 
 
+exports.getWishlist = async(req , res, next) => {
+  try {
+
+    const {id} = req.user
+
+    const user = await UserModel.findOne({ _id: id })
+      .populate({
+        path: "wishlist",
+        populate: [
+          {
+            path: "createdBy",
+            select: "firstname lastname",
+          },
+          {
+            path: "ratings.postedBy",
+            select: "firstname lastname",
+          },
+        ],
+      })
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      whislist: user.wishlist
+    })
+
+  } catch (error) {
+    next(error)
+  }
+}

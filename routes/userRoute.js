@@ -16,7 +16,7 @@ router.route("/change-password").patch(authMiddleware , userCtrl.changePassword)
 router.route("/all-block-users").get(authMiddleware , isAdminMiddleware , userCtrl.getAllBlockUsers)
 router.route("/block/:id").patch(authMiddleware , isAdminMiddleware , userCtrl.blockUser)
 router.route("/unblock/:id").patch(authMiddleware , isAdminMiddleware , userCtrl.unBlockUser)
-
+router.route("/wishlist/:id").get(authMiddleware , userCtrl.getWishlist)
 router
   .route("/:id")
   .get(userCtrl.getOneUser)

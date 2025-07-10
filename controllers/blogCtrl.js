@@ -1,5 +1,8 @@
 const { isValidObjectId } = require("mongoose");
 const BlogModel = require("./../models/blogModel");
+const sharp = require('sharp');
+const fs = require('fs');
+const path = require('path');
 
 exports.createBlog = async (req, res, next) => {
   try {
@@ -191,6 +194,11 @@ exports.removeBlog = async (req, res, next) => {
       });
     }
 
+    if(blog.cover){
+      const coverPath = path.join(__dirname , ".." , "public" , blog.cover)
+      fs.unlinkSync(coverPath)
+    }
+    
     return res.status(200).json({
       success: true,
       message: "Blog removed successfully ✅",
@@ -298,4 +306,94 @@ exports.disLikeTheBlog = async(req , res, next) => {
     } catch (error) {
         next(error)
     }
+}
+
+exports.addBlogCover = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(422).json({
+        success: false,
+        message: "Blog ID is not valid ❌",
+      });
+    }
+
+    const blog = await BlogModel.findOne({ _id: id });
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found ❌",
+      });
+    }
+
+    if (!req.file)
+      return res.status(400).json({ message: "No image uploaded" });
+
+    if (blog.cover) {
+      const oldPath = path.join(__dirname, "../public", blog.cover);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    const filename = `cover-${Date.now()}.jpeg`;
+    await sharp(req.file.path)
+      .resize(800, 800)
+      .toFormat("jpeg")
+      .jpeg({ quality: 80 })
+      .toFile(path.join(__dirname, "../public/images/blogs", filename));
+    fs.unlinkSync(req.file.path);
+
+    blog.cover = `/images/blogs/${filename}`;
+    await blog.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Cover updated successfully",
+    });
+  } catch (err) {
+    fs.unlinkSync(req.file.path);
+    next(err);
+  }
+};
+
+exports.removeBlogCover = async(req , res , next) => {
+  try {
+
+    const {id} = req.params
+
+    if(!isValidObjectId(id)){
+      return res.status(422).json({
+        success: false,
+        message: "Blog ID is not valid ❌"
+      })
+    }
+
+    const blog = await BlogModel.findOne({ _id: id });
+
+    if (!blog) {
+      return res.status(404).json({
+        success: false,
+        message: "Blog not found ❌",
+      });
+    }
+
+    if (blog.cover) {
+      const coverPath = path.join(__dirname, "..", "public", blog.cover);
+      if (fs.existsSync(coverPath)) {
+        fs.unlinkSync(coverPath);
+      }
+
+      blog.cover = null;
+      await blog.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Cover image removed successfully",
+    });
+    
+  } catch (error) {
+    next(error)
+  }
 }
