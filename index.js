@@ -15,6 +15,9 @@ const blogRouter = require("./routes/blogRoute");
 const categoryRouter = require("./routes/categoryRoute");
 const coupenRouter = require("./routes/coupenRoute");
 const brandRouter = require("./routes/brandRoute");
+const addressRouter = require("./routes/addressRoute");
+const orderRouter = require("./routes/orderRoute");
+const cartRouter = require("./routes/cartRoute");
 
 app.use("/public", express.static(path.join(__dirname, "public")));
 
@@ -32,6 +35,9 @@ app.use("/api/blog" , blogRouter)
 app.use("/api/category" , categoryRouter)
 app.use("/api/brand" , brandRouter)
 app.use("/api/coupen" , coupenRouter)
+app.use("/api/address", addressRouter);
+app.use("/api/order", orderRouter);
+app.use("/api/cart", cartRouter);
 
 
 // Error Handler

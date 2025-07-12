@@ -1,6 +1,6 @@
 const { isValidObjectId } = require("mongoose");
 const UserModel = require("./../models/userModel");
-const coupenModel = require("./../models/coupenModel");
+const ProductModel = require("./../models/productModel");
 const bcrypt = require('bcrypt');
 
 exports.getAllUsers = async (req, res, next) => {
@@ -110,7 +110,6 @@ exports.updateOneUser = async (req, res, next) => {
   }
 };
 
-
 exports.updateOneUserByAdmin = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -149,6 +148,46 @@ exports.updateOneUserByAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+exports.changeUserRole = async(req , res, next) => {
+  try {
+
+    const {userId} = req.params
+
+    if(!isValidObjectId(userId)){
+      return res.status(422).json({
+        success: false,
+        message: "User ID is not valid ❌"
+      })
+    }
+
+    const user = await UserModel.findOne({_id: userId})
+
+    if(!user){
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      })
+    }
+
+    if(user.role === "admin"){
+      user.role = "user"
+    }else{
+      user.role = "admin";
+    }
+    
+
+    await user.save()
+
+    return res.status(200).json({
+      success: false,
+      message: "Role changed successfully ✅",
+    });
+    
+  } catch (error) {
+    next(error)
+  }
+}
 
 exports.blockUser = async (req, res, next) => {
   try {
@@ -246,7 +285,6 @@ exports.getAllBlockUsers = async (req , res, next) => {
   }
 }
 
-
 exports.changePassword = async (req, res, next) => {
   try {
     const { password } = req.body;
@@ -272,7 +310,6 @@ exports.changePassword = async (req, res, next) => {
     next(error);
   }
 };
-
 
 exports.getWishlist = async(req , res, next) => {
   try {
@@ -304,3 +341,77 @@ exports.getWishlist = async(req , res, next) => {
     next(error)
   }
 }
+
+exports.addProdutToRecentlyViewed = async(req , res, next) => {
+  try {
+    const {productId} = req.body
+    const userId = req.user.id
+
+    if(!isValidObjectId(productId)){
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid"
+      })
+    }
+
+    const product = await ProductModel.findOne({_id: productId})
+
+    if(!product){
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      })
+    }
+
+    const user = await UserModel.find({_id: userId})
+
+    const index = user.recentlyViewed.findIndex(
+      (item) => item.product.toString() === productId
+    );
+
+
+      if (index !== -1) {
+        user.recentlyViewed[productExistsinRecentlyViewed].viewedAt =
+          Date.now();
+      }else{
+        user.recentlyViewed.unshift({
+          product: productId,
+          viewedAt: new Date(),
+        })
+
+        if (user.recentlyViewed.length > 10) {
+          user.recentlyViewed = user.recentlyViewed.slice(0, 10);
+        }
+      }
+
+    await user.save()
+
+    return res.status(200).json({
+      success: true,
+      message: "Product added to recently viewed ✅",
+    });
+
+  } catch (error) {
+    next(error)
+  }
+} 
+
+exports.getRecentlyViewedProducts = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const user = await UserModel.findById(userId).populate("recentlyViewed.product");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      products: user.recentlyViewed,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

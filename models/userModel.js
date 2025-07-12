@@ -37,6 +37,18 @@ const userSchema = new mongoose.Schema(
     cart: { Array, default: [] },
     address: [{ type: mongoose.Types.ObjectId, ref: "Address" }],
     wishlist: [{ type: mongoose.Types.ObjectId, ref: "Product" }],
+    recentlyViewed: [
+      {
+        product: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Product",
+        },
+        viewedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

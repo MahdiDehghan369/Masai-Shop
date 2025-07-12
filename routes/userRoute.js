@@ -17,6 +17,11 @@ router.route("/all-block-users").get(authMiddleware , isAdminMiddleware , userCt
 router.route("/block/:id").patch(authMiddleware , isAdminMiddleware , userCtrl.blockUser)
 router.route("/unblock/:id").patch(authMiddleware , isAdminMiddleware , userCtrl.unBlockUser)
 router.route("/wishlist/:id").get(authMiddleware , userCtrl.getWishlist)
+router.route("/:userId/change-role").patch(authMiddleware , isAdminMiddleware , userCtrl.changeUserRole)
+router
+  .route("/recently-viewed")
+  .post(authMiddleware, userCtrl.addProdutToRecentlyViewed)
+  .get(authMiddleware, userCtrl.getRecentlyViewedProducts);
 router
   .route("/:id")
   .get(userCtrl.getOneUser)

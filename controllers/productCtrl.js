@@ -250,7 +250,6 @@ exports.getAllProducts = async (req, res, next) => {
   }
 };
 
-
 exports.addToWishlist = async(req, res, next) => {
   try {
     const userId = req.user.id 
