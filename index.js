@@ -18,6 +18,7 @@ const brandRouter = require("./routes/brandRoute");
 const addressRouter = require("./routes/addressRoute");
 const orderRouter = require("./routes/orderRoute");
 const cartRouter = require("./routes/cartRoute");
+const contactRouter = require("./routes/contactRoute");
 
 app.use("/public", express.static(path.join(__dirname, "public")));
 
@@ -38,6 +39,7 @@ app.use("/api/coupen" , coupenRouter)
 app.use("/api/address", addressRouter);
 app.use("/api/order", orderRouter);
 app.use("/api/cart", cartRouter);
+app.use("/api/contact", contactRouter);
 
 
 // Error Handler

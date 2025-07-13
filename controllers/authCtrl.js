@@ -214,7 +214,6 @@ exports.requestResetPassword = async(req , res, next) => {
 
     const sendEmail = await sendOtpCode(email , otpCode)
 
-    console.log(sendEmail);
 
     res.status(201).json({
       message: "If this email is registered, an OTP has been sent.",
