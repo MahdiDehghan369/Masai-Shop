@@ -36,7 +36,7 @@ const productSchema = new mongoose.Schema(
       min: 0,
       required: true,
     },
-    cover:{
+    cover: {
       type: String,
     },
     gallery: [
@@ -55,11 +55,16 @@ const productSchema = new mongoose.Schema(
     color: {
       type: String,
     },
+    statusProduct: {
+      type: String,
+      enum: ["published", "Unpublished"],
+      default: "Unpublished",
+    },
     ratings: [
       {
         star: { type: Number, min: 1, max: 5 },
-        comment: {type: String},
-        postedBy: { type: mongoose.Types.ObjectId, ref: "User" }
+        comment: { type: String },
+        postedBy: { type: mongoose.Types.ObjectId, ref: "User" },
       },
     ],
     averageRating: {

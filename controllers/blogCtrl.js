@@ -6,7 +6,7 @@ const path = require('path');
 
 exports.createBlog = async (req, res, next) => {
   try {
-    let { title, description, slug } = req.body;
+    let { title, description, slug , category } = req.body;
 
     slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
 
@@ -19,10 +19,27 @@ exports.createBlog = async (req, res, next) => {
       });
     }
 
+    if (!isValidObjectId(category)) {
+          return res.status(422).json({
+            success: false,
+            message: "Category ID is not valid",
+          });
+        }
+    
+        const existsCategory = await CategoryModel.findOne({ _id: category , type: "blog" });
+    
+        if (!existsCategory) {
+          return res.status(404).json({
+            success: false,
+            message: "Category Not Found",
+          });
+        }
+
     const blog = await BlogModel.create({
       title,
       description,
       slug,
+      category,
       author: req.user._id
     });
 
@@ -56,7 +73,7 @@ exports.updateBlog = async (req, res, next) => {
       });
     }
 
-    let { title, description, slug } = req.body;
+    let { title, description, slug , category } = req.body;
 
     slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
 
@@ -76,7 +93,27 @@ exports.updateBlog = async (req, res, next) => {
       });
     }
 
+       if (!isValidObjectId(category)) {
+         return res.status(422).json({
+           success: false,
+           message: "Category ID is not valid",
+         });
+       }
+
+       const existsCategory = await CategoryModel.findOne({
+         _id: category,
+         type: "blog",
+       });
+
+       if (!existsCategory) {
+         return res.status(404).json({
+           success: false,
+           message: "Category Not Found",
+         });
+       }
+
     blog.title = title;
+    blog.category = category;
     blog.description = description;
     blog.slug = slug;
 

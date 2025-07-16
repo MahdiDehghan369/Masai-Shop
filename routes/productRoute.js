@@ -14,6 +14,8 @@ router
   .post(authMiddleware, isAdminMiddleware, productCtrl.createProduct)
   .get(productCtrl.getAllProducts);
 
+router.route("/get-all").get(authMiddleware , isAdminMiddleware , productCtrl.getAllProductForAdmin)
+
 
   router.route("/whishlist").put(authMiddleware, productCtrl.addToWishlist);
   router.route("/rating").post(authMiddleware, productCtrl.rating);
@@ -37,6 +39,9 @@ router
     productCtrl.removeAImageFromGallery
   ).put(authMiddleware , isAdminMiddleware , uploadPhoto.array("images" , 10) , productImgResize , productCtrl.addProductGallery)
 
+
+  router.route("/:id/publish").patch(authMiddleware , isAdminMiddleware , productCtrl.publishProduct)
+  router.route("/:id/unpublish").patch(authMiddleware , isAdminMiddleware , productCtrl.unPublishProduct)
 
 router
   .route("/:id")

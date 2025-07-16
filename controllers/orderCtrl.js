@@ -63,7 +63,8 @@ exports.createOrder = async (req, res, next) => {
     cart.items.forEach(async (element) => {
       const product = await ProductModel.findOne({_id: element.product})
       await ProductModel.updateOne({_id: element.product} , {
-        quantity: product.quantity - element.quantity
+        quantity: product.quantity - element.quantity,
+        sold: element.sold + 1
       })
     });
 

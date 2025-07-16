@@ -1,28 +1,20 @@
 const { isValidObjectId } = require("mongoose");
 const ProductModel = require("./../models/productModel");
 const UserModel = require("../models/userModel");
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
+const CategoryModel = require("../models/categoryModel");
+const BrandModel = require("../models/brandModel");
+const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
 
 exports.createProduct = async (req, res, next) => {
   try {
-
-    let {
-      title,
-      slug,
-      description,
-      price,
-      category,
-      quantity,
-      brand,
-      color,
-    } = req.body;
+    let { title, slug, description, price, category, quantity, brand, color } =
+      req.body;
 
     slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
 
     const isProductExistsWithSlug = await ProductModel.findOne({ slug }).lean();
-
 
     if (isProductExistsWithSlug) {
       return res.status(422).json({
@@ -31,6 +23,46 @@ exports.createProduct = async (req, res, next) => {
       });
     }
 
+    if (!isValidObjectId(category)) {
+      return res.status(422).json({
+        success: false,
+        message: "Category ID is not valid",
+      });
+    }
+
+    const existsCategory = await CategoryModel.findOne({
+      _id: category,
+      type: "product",
+    });
+
+    if (!existsCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Category Not Found",
+      });
+    }
+
+
+   if(brand){
+     if (!isValidObjectId(brand)) {
+       return res.status(422).json({
+         success: false,
+         message: "Brand ID is not valid",
+       });
+     }
+
+     const existsBrand = await BrandModel.findOne({
+       _id: brand,
+       isPublished: true
+     });
+
+     if (!existsBrand) {
+       return res.status(404).json({
+         success: false,
+         message: "Brand Not Found",
+       });
+     }
+   }
 
     const newProduct = await ProductModel.create({
       title,
@@ -54,62 +86,106 @@ exports.createProduct = async (req, res, next) => {
   }
 };
 
-exports.updateProdut = async(req, res , next) => {
-try {
+exports.updateProdut = async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-  const {id} = req.params
+    if (!isValidObjectId(id)) {
+      return res.status(422).json({
+        success: false,
+        message: "Product Id is not valid ❌",
+      });
+    }
 
-  if(!isValidObjectId(id)){
-    return res.status(422).json({
-      success: false,
-      message: "Product Id is not valid ❌"
-    })
-  }
+    const product = await ProductModel.findOne({ _id: id }).lean();
 
-  const product = await ProductModel.findOne({_id: id}).lean()
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌",
+      });
+    }
 
-  if(!product){
-    return res.status(404).json({
-      success: false,
-      message: "Product not found ❌"
-    })
-  }
-
-  let { title, slug, description, price, category, quantity, brand, color } =
-    req.body;
+    let { title, slug, description, price, category, quantity, brand, color } =
+      req.body;
 
     slug = slug.trim().toLowerCase().replace(/\s+/g, "-");
 
-  const isProductExistsWithSlug = await ProductModel.findOne({$and: [{slug} , {_id : {$ne : id}}]}).lean();
+    const isProductExistsWithSlug = await ProductModel.findOne({
+      $and: [{ slug }, { _id: { $ne: id } }],
+    }).lean();
 
-  if (isProductExistsWithSlug) {
-    return res.status(422).json({
-      success: false,
-      message: "A product with this slug already exists ❌",
+    if (isProductExistsWithSlug) {
+      return res.status(422).json({
+        success: false,
+        message: "A product with this slug already exists ❌",
+      });
+    }
+
+    if (!isValidObjectId(category)) {
+      return res.status(422).json({
+        success: false,
+        message: "Category ID is not valid",
+      });
+    }
+
+    const existsCategory = await CategoryModel.findOne({
+      _id: category,
+      type: "product",
     });
+
+    if (!existsCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Category Not Found",
+      });
+    }
+
+    if (brand) {
+      if (!isValidObjectId(brand)) {
+        return res.status(422).json({
+          success: false,
+          message: "Brand ID is not valid",
+        });
+      }
+
+      const existsBrand = await BrandModel.findOne({
+        _id: brand,
+        isPublished: true,
+      });
+
+      if (!existsBrand) {
+        return res.status(404).json({
+          success: false,
+          message: "Brand Not Found",
+        });
+      }
+    }
+
+    const updatedProduct = await ProductModel.updateOne(
+      { _id: id },
+      {
+        title,
+        slug,
+        description,
+        price,
+        category,
+        quantity,
+        brand,
+        color,
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Product updated successfully ✅",
+    });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const updatedProduct = await ProductModel.updateOne({_id:id},{
-    title,
-    slug,
-    description,
-    price,
-    category,
-    quantity,
-    brand,
-    color,
-  });
-
-  return res.status(200).json({
-    success: true,
-    message: "Product updated successfully ✅",
-  });
-} catch (error) {
-  next(error);
-}
-}
-
-exports.removeOneProduct = async(req, res , next) => {
+exports.removeOneProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -129,14 +205,11 @@ exports.removeOneProduct = async(req, res , next) => {
       });
     }
 
-    const imageUrls = product.images
+    const imageUrls = product.images;
 
-    if(imageUrls){
+    if (imageUrls) {
       imageUrls.forEach((file) => {
-        const filePath = path.join(
-          __dirname,
-          `../public${file}`
-        );
+        const filePath = path.join(__dirname, `../public${file}`);
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       });
     }
@@ -146,17 +219,24 @@ exports.removeOneProduct = async(req, res , next) => {
       message: "Product removed successfully ❌",
     });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 exports.getOneProductInfo = async (req, res, next) => {
   try {
     let { slug } = req.params;
 
-    slug = slug.trim().replace(" " , "-");
+    slug = slug.trim().replace(" ", "-");
 
-    const product = await ProductModel.findOne({ slug }, "-__v").populate("createdBy" , "firstname , lastname , email").populate("ratings.postedBy" , "firstname , lastname , _id").populate("category").lean();
+    const product = await ProductModel.findOne(
+      { slug, statusProduct: "published" },
+      "-__v"
+    )
+      .populate("createdBy", "firstname , lastname , email")
+      .populate("ratings.postedBy", "firstname , lastname , _id")
+      .populate("category")
+      .lean();
 
     if (!product) {
       return res.status(404).json({
@@ -190,7 +270,11 @@ exports.getAllProducts = async (req, res, next) => {
       limit = 10,
     } = req.query;
 
+    
+
     const query = {};
+
+    query.statusProduct = "published";
 
     if (search) {
       query.$or = [
@@ -201,14 +285,14 @@ exports.getAllProducts = async (req, res, next) => {
 
     if (brand) {
       query.brand = { $regex: new RegExp(`^${brand}$`, "i") };
-    }    
+    }
 
     if (color) {
       query.color = { $regex: new RegExp(`^${color}$`, "i") };
     }
-    
 
     if (category) {
+      
       query.category = category;
     }
 
@@ -230,7 +314,8 @@ exports.getAllProducts = async (req, res, next) => {
     const products = await ProductModel.find(query)
       .sort(sortOption)
       .skip(skip)
-      .limit(Number(limit)).populate("category")
+      .limit(Number(limit))
+      .populate("category")
       .lean();
 
     const total = await ProductModel.countDocuments(query);
@@ -250,63 +335,73 @@ exports.getAllProducts = async (req, res, next) => {
   }
 };
 
-exports.addToWishlist = async(req, res, next) => {
-  try {
-    const userId = req.user.id 
-    const {productId} = req.body
+exports.getAllProductForAdmin = async (req, res, next) => {
+  const {
+    category,
+    brand,
+    color,
+    inStock,
+    sortBy = "createdAt",
+    order = "desc",
+    page = 1,
+    limit = 10,
+    statusProduct,
+  } = req.query;
 
-    if(!isValidObjectId(productId)){
-      return res.status(422).json({
-        success: false,
-        message: "Product ID is not valid ❌"
-      })  
-    }
+  const query = {};
 
-    const product = await ProductModel.findOne({_id: productId})
-
-    if(!product){
-      return res.status(404).json({
-        success: false,
-        message: "Product not found ❌"
-      })
-    }
-
-    const user = await UserModel.findOne({_id: userId})
-
-    const alredyExists = user.wishlist.includes(productId)
-
-    let message = ""
-
-    if(alredyExists){
-      await UserModel.updateOne({_id: userId} , {
-        $pull: {wishlist: productId}
-      })
-
-      message = "Product removed from whishlist 👍"
-    }else{
-      await UserModel.updateOne(
-        { _id: userId },
-        {
-          $push: { wishlist: productId },
-        }
-      );
-       message = "Product added to whishlist 👍";
-    }
-
-    return res.status(200).json({
-      success: true,
-      message
-    })
-
-  } catch (error) {
-    next(error)
+  if (brand) {
+    query.brand = { $regex: new RegExp(`^${brand}$`, "i") };
   }
-}
 
-exports.rating = async(req , res , next) => {
+  if (statusProduct) {
+    query.statusProduct = statusProduct;
+  }
+
+  if (color) {
+    query.color = { $regex: new RegExp(`^${color}$`, "i") };
+  }
+
+  if (category) {
+    query.category = category;
+  }
+
+  if (inStock === "true") {
+    query.quantity = { $gt: 0 };
+  } else if (inStock === "false") {
+    query.quantity = 0;
+  }
+
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const sortOption = {};
+  sortOption[sortBy] = order === "asc" ? 1 : -1;
+
+  const products = await ProductModel.find(query)
+    .sort(sortOption)
+    .skip(skip)
+    .limit(Number(limit))
+    .populate("category")
+    .lean();
+
+  const total = await ProductModel.countDocuments(query);
+
+  res.status(200).json({
+    success: true,
+    data: products,
+    meta: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      pages: Math.ceil(total / limit),
+    },
+  });
+};
+
+exports.addToWishlist = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { productId , star, comment } = req.body;
+    const { productId } = req.body;
 
     if (!isValidObjectId(productId)) {
       return res.status(422).json({
@@ -315,7 +410,68 @@ exports.rating = async(req , res , next) => {
       });
     }
 
-    const product = await ProductModel.findOne({ _id: productId });
+    const product = await ProductModel.findOne({
+      _id: productId,
+      statusProduct: "published",
+    });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌",
+      });
+    }
+
+    const user = await UserModel.findOne({ _id: userId });
+
+    const alredyExists = user.wishlist.includes(productId);
+
+    let message = "";
+
+    if (alredyExists) {
+      await UserModel.updateOne(
+        { _id: userId },
+        {
+          $pull: { wishlist: productId },
+        }
+      );
+
+      message = "Product removed from whishlist 👍";
+    } else {
+      await UserModel.updateOne(
+        { _id: userId },
+        {
+          $push: { wishlist: productId },
+        }
+      );
+      message = "Product added to whishlist 👍";
+    }
+
+    return res.status(200).json({
+      success: true,
+      message,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.rating = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { productId, star, comment } = req.body;
+
+    if (!isValidObjectId(productId)) {
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid ❌",
+      });
+    }
+
+    const product = await ProductModel.findOne({
+      _id: productId,
+      statusProduct: "published",
+    });
 
     if (!product) {
       return res.status(404).json({
@@ -336,7 +492,7 @@ exports.rating = async(req , res , next) => {
       product.ratings.push({
         postedBy: userId,
         star,
-        comment
+        comment,
       });
       product.totalRating += 1;
     }
@@ -347,63 +503,19 @@ exports.rating = async(req , res , next) => {
     }
     product.averageRating = totalStars / product.ratings.length;
 
-
     await product.save();
 
     return res.status(200).json({
       success: true,
       message: "Rating submitted successfully ✅",
-      product
+      product,
     });
-
-
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
-exports.removeCover = async(req , res , next) => {
-  try {
-
-    const {id} = req.params
-
-    if(!isValidObjectId(id)){
-      return res.status(422).json({
-        success: false,
-        message: "Product ID is not valid ❌"
-      })
-    }
-
-    const product = await ProductModel.findOne({_id: id})
-
-    if(!product){
-      return res.status(404).json({
-        success: false,
-        message:"Product not found ❌"
-      })
-    }
-
-    if(product.cover){
-      const coverPath = path.join(__dirname , ".." , "public" , product.cover)
-      if(fs.existsSync(coverPath)){
-        fs.unlinkSync(coverPath)
-      }
-
-      product.cover = null
-      await product.save()
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Cover image removed successfully",
-    });
-    
-  } catch (error) {
-    next(error)
-  }
-}
-
-exports.removeAImageFromGallery = async(req , res , next) => {
+exports.removeCover = async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -423,31 +535,67 @@ exports.removeAImageFromGallery = async(req , res , next) => {
       });
     }
 
+    if (product.cover) {
+      const coverPath = path.join(__dirname, "..", "public", product.cover);
+      if (fs.existsSync(coverPath)) {
+        fs.unlinkSync(coverPath);
+      }
 
-    const {imageUrl} = req.body
+      product.cover = null;
+      await product.save();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Cover image removed successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.removeAImageFromGallery = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid ❌",
+      });
+    }
+
+    const product = await ProductModel.findOne({ _id: id });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌",
+      });
+    }
+
+    const { imageUrl } = req.body;
 
     if (!product.gallery.includes(imageUrl)) {
       return res.status(400).json({ message: "Image not found in gallery" });
     }
 
-      const filePath = path.join(__dirname , ".." , "public" , imageUrl)
-      if(fs.existsSync(filePath)){
-        fs.unlinkSync(filePath)
-      }
+    const filePath = path.join(__dirname, "..", "public", imageUrl);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
 
+    product.gallery = product.gallery.filter((img) => img !== imageUrl);
+    await product.save();
 
-      product.gallery = product.gallery.filter((img) => img !== imageUrl);
-      await product.save();
-
-      res.status(200).json({
-        success: true,
-        message: "Gallery image removed successfully",
-      });
-
+    res.status(200).json({
+      success: true,
+      message: "Gallery image removed successfully",
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
 
 exports.addProductCover = async (req, res, next) => {
   try {
@@ -483,8 +631,7 @@ exports.addProductCover = async (req, res, next) => {
       .toFormat("jpeg")
       .jpeg({ quality: 80 })
       .toFile(path.join(__dirname, "../public/images/products", filename));
-      fs.unlinkSync(req.file.path); 
-
+    fs.unlinkSync(req.file.path);
 
     product.cover = `/images/products/${filename}`;
     await product.save();
@@ -498,9 +645,8 @@ exports.addProductCover = async (req, res, next) => {
   }
 };
 
-exports.addProductGallery = async(req , res, next) => {
+exports.addProductGallery = async (req, res, next) => {
   try {
-
     const { id } = req.params;
 
     if (!isValidObjectId(id)) {
@@ -522,20 +668,100 @@ exports.addProductGallery = async(req , res, next) => {
     if (!req.files)
       return res.status(400).json({ message: "No images uploaded" });
 
-    const images = req.files
+    const images = req.files;
     const imageUrls =
-      images.map((image) => product.gallery.push(`/images/products/${image.filename}`)) || [];
+      images.map((image) =>
+        product.gallery.push(`/images/products/${image.filename}`)
+      ) || [];
 
-      
-      await product.save();
+    await product.save();
 
-      res.status(200).json({
-        success: true,
-        message: "Gallery image added successfully",
-        gallery: product.gallery,
-      });
-    
+    res.status(200).json({
+      success: true,
+      message: "Gallery image added successfully",
+      gallery: product.gallery,
+    });
   } catch (error) {
-    next(error)
+    next(error);
   }
-}
+};
+
+exports.publishProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid ❌",
+      });
+    }
+
+    const product = await ProductModel.findOne({ _id: id });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌",
+      });
+    }
+
+    if (product.statusProduct === "published") {
+      return res.status(400).json({
+        success: false,
+        message: "Product already published",
+      });
+    }
+
+    product.statusProduct = "published";
+
+    await product.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Product published successfully ✅",
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.unPublishProduct = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(422).json({
+        success: false,
+        message: "Product ID is not valid ❌",
+      });
+    }
+
+    const product = await ProductModel.findOne({ _id: id });
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found ❌",
+      });
+    }
+
+    if (product.statusProduct === "Unpublished") {
+      return res.status(400).json({
+        success: false,
+        message: "Product already Unpublished",
+      });
+    }
+
+    product.statusProduct = "Unpublished";
+
+    await product.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Product Unpublished successfully ✅",
+    });
+  } catch (error) {
+    next(error);
+  }
+};

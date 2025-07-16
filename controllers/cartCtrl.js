@@ -8,7 +8,7 @@ exports.addToCart = async (req, res, next) => {
     const { productId, quantity, color } = req.body;
     const userId = req.user.id;
 
-    const product = await ProductModel.findOne({ _id: productId });
+    const product = await ProductModel.findOne({ _id: productId , statusProduct: "published"});
 
     if (!product) {
       return res.status(404).json({
@@ -54,7 +54,7 @@ exports.updateCartItem = async (req, res, next) => {
     const userId = req?.user?.id;
     const { productId, color, quantity } = req.body;
 
-    const product = await ProductModel.findOne({ _id: productId });
+    const product = await ProductModel.findOne({ _id: productId , statusProduct: "published" });
 
     if (!product) {
       return res.status(404).json({
